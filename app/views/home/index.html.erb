@@ -1,0 +1,13 @@
+   <div class="form-container">
+        <h1>Convert</h1>
+       <%= form_with url: convert_path, method: :post do |form| %>
+            <div class="form-group">
+                <label for="name">Youtube URL</label>
+                <input type="text" id="name" name="youtube_url" placeholder="Enter a valid youtube url" required>
+            </div>
+      
+            <div class="form-group">
+                <button type="submit">Download MP3</button>
+            </div>
+         <% end %>
+    </div>
