@@ -21,20 +21,84 @@
     <meta name="twitter:description" content="A Simple youtube to mp3 converter by Riyad Anabtawi">
     <meta name="twitter:image" content="https://example.com/images/form-preview.png">
 
-    <%# Enable PWA manifest for installable apps (make sure to enable in config/routes.rb too!) %>
-    <%#= tag.link rel: "manifest", href: pwa_manifest_path(format: :json) %>
-
-    <link rel="icon" href="/icon.png" type="image/png">
-    <link rel="icon" href="/icon.svg" type="image/svg+xml">
-    <link rel="apple-touch-icon" href="/icon.png">
-
-    <%# Includes all stylesheet files in app/assets/stylesheets %>
     <%= stylesheet_link_tag :app, "data-turbo-track": "reload" %>
     <%= javascript_importmap_tags %>
     <link rel="stylesheet" href="/style.css"/>
+    <style>
+      /* Loader overlay styling */
+      #loader {
+        display: none;                  /* Hidden by default */
+        position: fixed;
+        top: 0; left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 1000;
+        justify-content: center;
+        align-items: center;
+        flex-direction: column;         /* Stack spinner and text vertically */
+      }
+
+      /* Spinner circle */
+      .spinner {
+        border: 6px solid #f3f3f3;      /* Light grey */
+        border-top: 6px solid #ffffff;  /* White on top for contrast */
+        border-radius: 50%;
+        width: 50px;
+        height: 50px;
+        animation: spin 1s linear infinite;
+        margin-bottom: 10px;
+      }
+
+      /* Spin animation keyframes */
+      @keyframes spin {
+        0%   { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+
+      /* Optional loader text under spinner */
+      .loader-text {
+        color: #fff;
+        font-size: 18px;
+        margin-top: 0.5rem;
+      }
+
+      .bubble {
+        display: inline-flex;
+        align-items: center;
+        background-color: #444;  
+        color: #fff;             
+        padding: 6px 10px;
+        margin: 5px;
+        border-radius: 12px;
+        font-size: 14px;
+        line-height: 1;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+      }
+      .bubble button {
+        margin-left: 8px;
+        border: none;
+        background: none;
+        color: #ff6666;         /* Slightly red color for "x" */
+        font-weight: bold;
+        cursor: pointer;
+        font-size: 14px;
+        padding: 0;
+        line-height: 1;
+      }
+      .bubble button:hover {
+        color: #ff3333;         /* Darker red on hover */
+      }
+    </style>
   </head>
 
   <body>
+    <!-- Loader overlay (hidden by default) -->
+    <div id="loader">
+      <div class="spinner"></div>
+      <div class="loader-text">Please wait...</div>
+    </div>
+
     <%= yield %>
   </body>
 </html>

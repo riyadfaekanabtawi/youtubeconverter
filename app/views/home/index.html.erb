@@ -1,13 +1,149 @@
-   <div class="form-container">
-        <h1>Convert</h1>
-       <%= form_with url: convert_path, method: :post do |form| %>
-            <div class="form-group">
-                <label for="name">Youtube URL</label>
-                <input type="text" id="name" name="youtube_url" placeholder="Enter a valid youtube url" required>
-            </div>
-      
-            <div class="form-group">
-                <button type="submit">Download MP3</button>
-            </div>
-         <% end %>
+<div class="form-container">
+  <h1>Convert</h1>
+  <p class="note">You can add up to 20 links at a time. Duplicate links are not allowed.</p>
+
+  <form id="youtube-form" action="<%= convert_path %>" method="post">
+    <%= hidden_field_tag :authenticity_token, form_authenticity_token %>
+    <div class="form-group">
+      <label for="youtube-input">Youtube URLs</label>
+      <input type="text" id="youtube-input" placeholder="Enter a valid YouTube URL and press Enter">
     </div>
+
+    <!-- Container for displaying bubbles -->
+    <div id="bubbles-container" class="bubbles-container"></div>
+
+    <!-- Hidden inputs will be appended here -->
+    <div id="hidden-inputs"></div>
+
+    <div class="form-group">
+      <button type="submit">Download MP3</button>
+    </div>
+  </form>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const youtubeInput = document.getElementById('youtube-input');
+  const bubblesContainer = document.getElementById('bubbles-container');
+  const hiddenInputsContainer = document.getElementById('hidden-inputs');
+  const form = document.getElementById('youtube-form');
+  const maxLinks = 20;
+
+  function addBubble(url) {
+    // Create a bubble element to display the URL.
+    const bubble = document.createElement('span');
+    bubble.className = 'bubble';
+    bubble.textContent = url;
+
+    // Add a remove button to allow deleting the URL.
+    const removeBtn = document.createElement('button');
+    removeBtn.type = 'button';
+    removeBtn.textContent = 'x';
+    removeBtn.addEventListener('click', function() {
+      bubblesContainer.removeChild(bubble);
+      // Remove corresponding hidden input.
+      const hiddenInput = hiddenInputsContainer.querySelector(`input[value="${url}"]`);
+      if (hiddenInput) {
+        hiddenInputsContainer.removeChild(hiddenInput);
+      }
+    });
+    bubble.appendChild(removeBtn);
+    bubblesContainer.appendChild(bubble);
+
+    // Create a hidden input that will be submitted.
+    const hiddenInput = document.createElement('input');
+    hiddenInput.type = 'hidden';
+    hiddenInput.name = 'youtube_urls[]';
+    hiddenInput.value = url;
+    hiddenInputsContainer.appendChild(hiddenInput);
+  }
+
+  youtubeInput.addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const url = youtubeInput.value.trim();
+      if (!url) return;
+
+      // Check if we've already reached the max link limit.
+      if (bubblesContainer.children.length >= maxLinks) {
+        alert(`You can only add up to ${maxLinks} links.`);
+        return;
+      }
+
+      // Check for duplicates before adding a new bubble.
+      const existingValues = Array.from(
+        hiddenInputsContainer.querySelectorAll('input[name="youtube_urls[]"]')
+      ).map(input => input.value.trim());
+
+      if (existingValues.includes(url)) {
+        alert('This URL is already added.');
+        return;
+      }
+
+      // If everything is okay, add the bubble and clear the input.
+      addBubble(url);
+      youtubeInput.value = '';
+    }
+  });
+
+  form.addEventListener('submit', function(e) {
+    e.preventDefault();
+
+    if (hiddenInputsContainer.children.length === 0) {
+      alert('Please add at least one YouTube URL.');
+      return;
+    }
+
+    // Show the loader overlay.
+    const loader = document.getElementById('loader');
+    loader.style.display = 'flex';
+
+    const formData = new FormData(form);
+
+    fetch(form.action, {
+      method: 'POST',
+      headers: {
+        'X-CSRF-Token': formData.get('authenticity_token')
+      },
+      body: formData
+    })
+    .then(response => {
+      if (!response.ok) {
+        return response.json().then(err => { throw new Error(err.error || 'Conversion failed'); });
+      }
+      // Capture Content-Disposition header for filename (if set).
+      const disposition = response.headers.get('Content-Disposition');
+      return response.blob().then(blob => ({ blob, disposition }));
+    })
+    .then(({ blob, disposition }) => {
+      // Create a temporary link to download the blob.
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      let filename = 'download';
+
+      if (disposition && disposition.indexOf('filename=') !== -1) {
+        filename = disposition.split('filename=')[1].replace(/"/g, '').trim();
+      } else {
+        // Fallback based on content type.
+        if (blob.type === 'audio/mp3') {
+          filename = 'video.mp3';
+        } else if (blob.type === 'application/zip') {
+          filename = 'videos.zip';
+        }
+      }
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    })
+    .catch(error => {
+      alert('Conversion failed: ' + error.message);
+    })
+    .finally(() => {
+      loader.style.display = 'none';
+    });
+  });
+});
+</script>
