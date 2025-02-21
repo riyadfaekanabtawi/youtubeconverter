@@ -35,12 +35,14 @@ Rails.application.configure do
   # config.ssl_options = { redirect: { exclude: ->(request) { request.path == "/up" } } }
 
   # Log to STDOUT with the current request id as a default log tag.
-  config.log_tags = [ :request_id ]
-  config.logger   = ActiveSupport::TaggedLogging.logger(STDOUT)
+  config.log_level = :debug  # Log everything, including detailed debug information.
 
-  # Change to "debug" to log everything (including potentially personally-identifiable information!)
-  config.log_level = ENV.fetch("RAILS_LOG_LEVEL", "info")
-
+  # Ensure logs are written to both STDOUT and log/production.log
+  config.logger = ActiveSupport::Logger.new(STDOUT)
+  config.logger.formatter = Logger::Formatter.new
+  config.logger = ActiveSupport::TaggedLogging.new(config.logger)
+  config.logger = ActiveSupport::Logger.new("log/production.log", 10, 50.megabytes) # Rotate logs to avoid excessive growth
+  
   # Prevent health checks from clogging up the logs.
   config.silence_healthcheck_path = "/up"
 
