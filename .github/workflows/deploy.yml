@@ -30,8 +30,8 @@ jobs:
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
-            docker pull ${{ secrets.DOCKER_USERNAME }}/youtubeconverter
+            docker pull ${{ secrets.DOCKER_USERNAME }}/youtubeconverter:latest || docker buildx build --platform linux/amd64 -t ${{ secrets.DOCKER_USERNAME }}/youtubeconverter:latest .
             docker stop youtubeconverter_web_1 || true
             docker rm youtubeconverter_web_1 || true
-            docker run -d -p 80:3000 --name youtubeconverter_web_1 ${{ secrets.DOCKER_USERNAME }}/youtubeconverter
-
+            docker rmi $(docker images -q ${{ secrets.DOCKER_USERNAME }}/youtubeconverter) || true
+            docker run -d -p 80:3000 --name youtubeconverter_web_1 --restart always ${{ secrets.DOCKER_USERNAME }}/youtubeconverter:latest
