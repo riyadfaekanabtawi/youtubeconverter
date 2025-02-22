@@ -3,7 +3,7 @@ name: Deploy to EC2
 on:
   push:
     branches:
-      - main  # Change this if your main branch is different
+      - main  # Change this if your main branch has a different name
 
 jobs:
   deploy:
@@ -13,43 +13,71 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
+      - name: Debug GitHub Secrets
+        run: |
+          echo "🔍 Checking if EC2_SSH_KEY is set..."
+          if [[ -z "${{ secrets.EC2_SSH_KEY }}" ]]; then
+            echo "🚨 ERROR: EC2_SSH_KEY is EMPTY in GitHub Secrets!"
+            exit 1
+          else
+            echo "✅ EC2_SSH_KEY is set."
+          fi
+
+      - name: Setup SSH Key for EC2
+        run: |
+          echo "🔍 Decoding SSH Key..."
+          echo "${{ secrets.EC2_SSH_KEY }}" | base64 --decode > ~/tienditapp.pem
+          chmod 600 ~/tienditapp.pem
+          echo "✅ SSH Key saved."
+
+          echo "🔍 Checking SSH Key permissions..."
+          ls -l ~/tienditapp.pem
+
+          echo "🔍 Showing first 5 lines of SSH key for verification..."
+          head -n 5 ~/tienditapp.pem
+
+      - name: Test SSH Connection to EC2
+        run: |
+          echo "🔍 Testing SSH Connection..."
+          ssh -i ~/tienditapp.pem -o StrictHostKeyChecking=no ubuntu@${{ secrets.EC2_HOST }} "echo '✅ Connected successfully to EC2'"
+        continue-on-error: true  # Allow the workflow to continue even if SSH fails
+
       - name: Log in to Docker Hub
         run: |
+          echo "🔍 Logging into Docker Hub..."
           if [[ -z "${{ secrets.DOCKER_USERNAME }}" || -z "${{ secrets.DOCKER_PASSWORD }}" ]]; then
             echo "🚨 ERROR: Missing Docker Hub credentials in GitHub Secrets"
             exit 1
           fi
           echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+          echo "✅ Docker login successful."
 
       - name: Build and Push Docker Image
         run: |
+          echo "🔍 Building and pushing Docker image..."
           docker buildx build --platform linux/amd64 -t ${{ secrets.DOCKER_USERNAME }}/youtubeconverter:latest .
           docker push ${{ secrets.DOCKER_USERNAME }}/youtubeconverter:latest
           docker logout  # Logout for security
-
-      - name: Setup SSH Key for EC2
-        run: |
-          echo "${{ secrets.EC2_SSH_KEY }}" | tr -d '\r' | base64 --decode > ~/tienditapp.pem
-          chmod 600 ~/tienditapp.pem
+          echo "✅ Docker image pushed successfully."
 
       - name: Deploy to EC2
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
-          key: ~/tienditapp.pem
+          key: ${{ secrets.EC2_SSH_KEY }}
           script: |
-            echo "Stopping and removing existing container..."
+            echo "🔍 Stopping existing container..."
             docker stop youtubeconvert-web-1 || true
             docker rm youtubeconvert-web-1 || true
 
-            echo "Removing all old images..."
+            echo "🔍 Removing old Docker images..."
             docker rmi $(docker images -q ${{ secrets.DOCKER_USERNAME }}/youtubeconverter) || true
 
-            echo "Forcing pull of the latest image..."
+            echo "🔍 Pulling latest Docker image..."
             docker pull --disable-content-trust=false ${{ secrets.DOCKER_USERNAME }}/youtubeconverter:latest
 
-            echo "Starting new container..."
+            echo "🔍 Starting new container..."
             docker run -d -p 80:3000 --name youtubeconvert-web-1 --restart always ${{ secrets.DOCKER_USERNAME }}/youtubeconverter:latest
 
-            echo "Deployment completed successfully!"
+            echo "✅ Deployment completed successfully!"
