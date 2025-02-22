@@ -5,7 +5,7 @@ class HomeController < ApplicationController
   require "zip"  # Ensure the rubyzip gem is installed
 
   def index
-    logger.info("aaaaaa")
+    logger.info("HomeController Loaded")
   end
 
   def convert
@@ -15,13 +15,23 @@ class HomeController < ApplicationController
     end
 
     converted_files = []
-    youtube_urls.each do |url|
-      begin
-        converted_files << convert_youtube_to_mp3(url)
-      rescue => e
-        cleanup_files(converted_files)
-        render json: { error: "Conversion error: #{e.message}" }, status: :unprocessable_entity and return
+    errors = []
+
+    threads = youtube_urls.map do |url|
+      Thread.new do
+        begin
+          converted_files << convert_youtube_to_mp3(url)
+        rescue => e
+          errors << "Error processing #{url}: #{e.message}"
+        end
       end
+    end
+
+    threads.each(&:join)
+
+    if errors.any?
+      cleanup_files(converted_files)
+      render json: { error: errors.join(", ") }, status: :unprocessable_entity and return
     end
 
     if converted_files.size == 1
@@ -38,28 +48,34 @@ class HomeController < ApplicationController
     temp_dir = Rails.root.join("tmp", "downloads")
     FileUtils.mkdir_p(temp_dir) unless Dir.exist?(temp_dir)
     unique_id = SecureRandom.hex(8)
-  
-    # Get the direct audio URL without downloading
+    output_template = temp_dir.join("video_#{unique_id}.%(ext)s").to_s
+
     command = [
-      "yt-dlp",
-      "--get-url",   # This extracts the direct media URL
-      "-f", "bestaudio",  # Fetch the best available audio format
+      "/app/venv/bin/yt-dlp",  # Ensure using yt-dlp inside the virtual environment
+      "-x",
+      "--audio-format", "mp3",
+      "-o", output_template,
       youtube_url
     ]
-  
+
     stdout, stderr, status = Open3.capture3(*command)
-  
-    if status.success?
-      audio_url = stdout.strip
-      Rails.logger.info "Extracted Audio URL: #{audio_url}"
-  
-      # Redirect user to the direct YouTube media URL (avoiding download)
-      return redirect_to audio_url
-    else
-      raise "Failed to extract media URL: #{stderr}"
+
+    unless status.success?
+      raise "Failed to convert video: #{stderr}"
     end
+
+    # Look for the generated MP3 file
+    mp3_file_path = temp_dir.join("video_#{unique_id}.mp3")
+    unless File.exist?(mp3_file_path)
+      files = Dir.glob(temp_dir.join("video_#{unique_id}.*")).select { |f| f.end_with?(".mp3") }
+      if files.any?
+        mp3_file_path = files.first
+      else
+        raise "MP3 file was not created."
+      end
+    end
+    mp3_file_path
   end
-  
 
   def create_zip(file_paths)
     temp_dir = Rails.root.join("tmp", "downloads")

@@ -12,8 +12,13 @@ RUN apt-get update -qq && apt-get install -y \
   ffmpeg \
   python3 \
   python3-pip \
-  yt-dlp \
+  python3-venv \
   && rm -rf /var/lib/apt/lists/*
+
+# Set up a Python virtual environment for yt-dlp
+RUN python3 -m venv /app/venv && \
+    /app/venv/bin/pip install -U pip yt-dlp && \
+    ln -s /app/venv/bin/yt-dlp /usr/local/bin/yt-dlp
 
 # Set working directory
 WORKDIR /app
