@@ -15,6 +15,10 @@ jobs:
 
       - name: Log in to Docker Hub
         run: |
+          if [[ -z "${{ secrets.DOCKER_USERNAME }}" || -z "${{ secrets.DOCKER_PASSWORD }}" ]]; then
+            echo "🚨 ERROR: Missing Docker Hub credentials in GitHub Secrets"
+            exit 1
+          fi
           echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
 
       - name: Build and Push Docker Image
