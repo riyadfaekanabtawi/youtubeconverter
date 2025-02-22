@@ -39,7 +39,7 @@ jobs:
       - name: Test SSH Connection to EC2
         run: |
           echo "🔍 Testing SSH Connection..."
-          ssh -i ~/tienditapp.pem -o StrictHostKeyChecking=no ubuntu@${{ secrets.EC2_HOST }} "echo '✅ Connected successfully to EC2'"
+          ssh -i ~/tienditapp.pem ubuntu@3.15.11.125 "echo '✅ Connected successfully to EC2'"
         continue-on-error: true  # Allow the workflow to continue even if SSH fails
 
       - name: Log in to Docker Hub
