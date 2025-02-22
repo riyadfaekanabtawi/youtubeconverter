@@ -3,7 +3,7 @@ name: Deploy to EC2
 on:
   push:
     branches:
-      - main  # Change if your main branch is different
+      - main  # Change this if your main branch is different
 
 jobs:
   deploy:
@@ -37,7 +37,7 @@ jobs:
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
-          key: ${{ secrets.EC2_SSH_KEY }}
+          key: ~/tienditapp.pem
           script: |
             echo "Stopping and removing existing container..."
             docker stop youtubeconvert-web-1 || true
