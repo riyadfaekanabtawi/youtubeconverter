@@ -1,8 +1,9 @@
-# Use official Ruby image
+# Use an Ubuntu-based Ruby image
 FROM ruby:3.3.5
 
 # Install system dependencies
 RUN apt-get update -qq && apt-get install -y \
+  sudo \
   build-essential \
   nodejs \
   yarn \
@@ -11,10 +12,8 @@ RUN apt-get update -qq && apt-get install -y \
   ffmpeg \
   python3 \
   python3-pip \
+  yt-dlp \
   && rm -rf /var/lib/apt/lists/*
-
-# Install yt-dlp via pip
-RUN pip3 install -U yt-dlp
 
 # Set working directory
 WORKDIR /app
@@ -36,9 +35,6 @@ RUN bundle exec rake assets:precompile
 
 # Expose port
 EXPOSE 3000
-
-# Ensure yt-dlp is available in PATH
-ENV PATH="/root/.local/bin:$PATH"
 
 # Command to start the app
 CMD ["bundle", "exec", "rails", "server", "-b", "0.0.0.0"]
