@@ -29,7 +29,7 @@ jobs:
 
       - name: Setup SSH Key for EC2
         run: |
-          echo -e "${{ secrets.EC2_SSH_KEY }}" > ~/tienditapp.pem
+          echo "${{ secrets.EC2_SSH_KEY }}" | base64 --decode > ~/tienditapp.pem
           chmod 600 ~/tienditapp.pem
 
       - name: Deploy to EC2
