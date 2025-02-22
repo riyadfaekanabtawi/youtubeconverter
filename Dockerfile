@@ -7,7 +7,14 @@ RUN apt-get update -qq && apt-get install -y \
   nodejs \
   yarn \
   sqlite3 \
-  libsqlite3-dev
+  libsqlite3-dev \
+  ffmpeg \
+  python3 \
+  python3-pip \
+  && rm -rf /var/lib/apt/lists/*
+
+# Install yt-dlp via pip
+RUN pip3 install -U yt-dlp
 
 # Set working directory
 WORKDIR /app
@@ -29,6 +36,9 @@ RUN bundle exec rake assets:precompile
 
 # Expose port
 EXPOSE 3000
+
+# Ensure yt-dlp is available in PATH
+ENV PATH="/root/.local/bin:$PATH"
 
 # Command to start the app
 CMD ["bundle", "exec", "rails", "server", "-b", "0.0.0.0"]
