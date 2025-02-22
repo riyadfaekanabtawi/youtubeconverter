@@ -3,7 +3,7 @@ name: Deploy to EC2
 on:
   push:
     branches:
-      - main  # Change this if your main branch name is different
+      - main  # Change if your main branch is different
 
 jobs:
   deploy:
@@ -29,7 +29,7 @@ jobs:
 
       - name: Setup SSH Key for EC2
         run: |
-          echo "${{ secrets.EC2_SSH_KEY }}" | base64 --decode > ~/tienditapp.pem
+          echo -e "${{ secrets.EC2_SSH_KEY }}" > ~/tienditapp.pem
           chmod 600 ~/tienditapp.pem
 
       - name: Deploy to EC2
@@ -37,7 +37,7 @@ jobs:
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
-          key: ~/tienditapp.pem
+          key: ${{ secrets.EC2_SSH_KEY }}
           script: |
             echo "Stopping and removing existing container..."
             docker stop youtubeconvert-web-1 || true
