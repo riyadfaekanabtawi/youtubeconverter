@@ -1,4 +1,7 @@
 class HomeController < ApplicationController
+  
+  skip_before_action :verify_authenticity_token, only: [:convert]
+
   require "open3"
   require "fileutils"
   require "securerandom"
@@ -10,13 +13,22 @@ class HomeController < ApplicationController
 
   def convert
     youtube_urls = params[:youtube_urls]
+  
     if youtube_urls.blank?
       render json: { error: "No URLs provided" }, status: :unprocessable_entity and return
     end
-
+  
+    # Remove unnecessary query parameters from YouTube URLs
+    youtube_urls.map! do |url|
+      uri = URI.parse(url)
+      "#{uri.scheme}://#{uri.host}#{uri.path}" # Keep only base URL (removes list, start_radio, etc.)
+    rescue URI::InvalidURIError
+      nil
+    end.compact
+  
     converted_files = []
     errors = []
-
+  
     threads = youtube_urls.map do |url|
       Thread.new do
         begin
@@ -26,14 +38,14 @@ class HomeController < ApplicationController
         end
       end
     end
-
+  
     threads.each(&:join)
-
+  
     if errors.any?
       cleanup_files(converted_files)
       render json: { error: errors.join(", ") }, status: :unprocessable_entity and return
     end
-
+  
     if converted_files.size == 1
       send_file converted_files.first, filename: "video.mp3", type: "audio/mp3"
     else
