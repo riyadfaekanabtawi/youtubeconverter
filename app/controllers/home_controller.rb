@@ -38,34 +38,28 @@ class HomeController < ApplicationController
     temp_dir = Rails.root.join("tmp", "downloads")
     FileUtils.mkdir_p(temp_dir) unless Dir.exist?(temp_dir)
     unique_id = SecureRandom.hex(8)
-    # Use a template so that yt-dlp appends the proper extension.
-    output_template = temp_dir.join("video_#{unique_id}.%(ext)s").to_s
-
+  
+    # Get the direct audio URL without downloading
     command = [
       "yt-dlp",
-      "-x",
-      "--audio-format", "mp3",
-      "-o", output_template,
+      "--get-url",   # This extracts the direct media URL
+      "-f", "bestaudio",  # Fetch the best available audio format
       youtube_url
     ]
-
+  
     stdout, stderr, status = Open3.capture3(*command)
-    unless status.success?
-      raise "Failed to convert video: #{stderr}"
+  
+    if status.success?
+      audio_url = stdout.strip
+      Rails.logger.info "Extracted Audio URL: #{audio_url}"
+  
+      # Redirect user to the direct YouTube media URL (avoiding download)
+      return redirect_to audio_url
+    else
+      raise "Failed to extract media URL: #{stderr}"
     end
-
-    # Look for the generated MP3 file.
-    mp3_file_path = temp_dir.join("video_#{unique_id}.mp3")
-    unless File.exist?(mp3_file_path)
-      files = Dir.glob(temp_dir.join("video_#{unique_id}.*")).select { |f| f.end_with?(".mp3") }
-      if files.any?
-        mp3_file_path = files.first
-      else
-        raise "MP3 file was not created."
-      end
-    end
-    mp3_file_path
   end
+  
 
   def create_zip(file_paths)
     temp_dir = Rails.root.join("tmp", "downloads")
