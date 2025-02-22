@@ -5,8 +5,9 @@ services:
     restart: always
     environment:
       RAILS_ENV: production
+      SECRET_KEY_BASE: "093e27fa6af2228e4748e2f777c05619ee66026904b15a56e190fd62debd514d1615739e8821a544889175f7fca9499c24f6ec113b4ebe4e3f8af6f4737038e4"
     ports:
-      - "80:3000"  # Maps port 80 on the host to port 3000 in the container
+      - "80:3000"
     volumes:
       - .:/app
-    command: ["bundle", "exec", "rails", "server", "-b", "0.0.0.0"]
+    command: ["bundle", "exec", "rails", "server", "-b", "0.0.0.0", "-p", "3000"]
