@@ -13,42 +13,22 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Debug SSH Key in GitHub Actions
+      - name: Save Private Key to File
         run: |
-          echo "🔍 Checking if EC2_SSH_KEY is set..."
-          if [[ -z "${{ secrets.EC2_SSH_KEY }}" ]]; then
-            echo "🚨 ERROR: EC2_SSH_KEY is EMPTY in GitHub Secrets!"
-            exit 1
-          else
-            echo "✅ EC2_SSH_KEY is set."
-          fi
-
-      - name: Setup SSH Key for EC2
-        run: |
-          echo "🔍 Decoding SSH Key..."
-          echo "${{ secrets.EC2_SSH_KEY }}" | base64 --decode > ~/tienditapp.pem
+          echo "🔍 Saving EC2 private key..."
+          echo "${{ secrets.EC2_SSH_PEM }}" > ~/tienditapp.pem
           chmod 600 ~/tienditapp.pem
-          echo "✅ SSH Key saved."
-
-          echo "🔍 Checking SSH Key permissions..."
-          ls -l ~/tienditapp.pem
-
-          echo "🔍 Showing first 5 lines of SSH key for verification..."
-          head -n 5 ~/tienditapp.pem
+          ls -l ~/tienditapp.pem  # Debugging: Check if key exists
+          echo "✅ EC2 private key saved successfully."
 
       - name: Test SSH Connection to EC2
         run: |
           echo "🔍 Testing SSH Connection..."
-          ssh -i ~/tienditapp.pem ubuntu@${{ secrets.EC2_HOST }} "echo '✅ Connected successfully to EC2'"
-        continue-on-error: true  # Allow the workflow to continue even if SSH fails
+          ssh -i ~/tienditapp.pem -o StrictHostKeyChecking=no ubuntu@${{ secrets.EC2_HOST }} "echo '✅ Connected successfully to EC2'"
 
       - name: Log in to Docker Hub
         run: |
           echo "🔍 Logging into Docker Hub..."
-          if [[ -z "${{ secrets.DOCKER_USERNAME }}" || -z "${{ secrets.DOCKER_PASSWORD }}" ]]; then
-            echo "🚨 ERROR: Missing Docker Hub credentials in GitHub Secrets"
-            exit 1
-          fi
           echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
           echo "✅ Docker login successful."
 
@@ -64,8 +44,8 @@ jobs:
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USER }}
-          key: ${{ secrets.EC2_SSH_KEY }}
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_PEM }}
           script: |
             echo "🔍 Stopping existing container..."
             docker stop youtubeconvert-web-1 || true
