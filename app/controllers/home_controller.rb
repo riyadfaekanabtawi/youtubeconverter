@@ -61,33 +61,32 @@ class HomeController < ApplicationController
     FileUtils.mkdir_p(temp_dir) unless Dir.exist?(temp_dir)
     unique_id = SecureRandom.hex(8)
     output_template = temp_dir.join("video_#{unique_id}.%(ext)s").to_s
-
+  
     command = [
-      "/app/venv/bin/yt-dlp",  # Ensure using yt-dlp inside the virtual environment
+      "/app/venv/bin/yt-dlp",
+      "--cookies", "/app/cookies.txt",  # Pass authentication cookies
       "-x",
       "--audio-format", "mp3",
       "-o", output_template,
       youtube_url
     ]
-
+  
     stdout, stderr, status = Open3.capture3(*command)
-
+  
     unless status.success?
       raise "Failed to convert video: #{stderr}"
     end
-
-    # Look for the generated MP3 file
-    mp3_file_path = temp_dir.join("video_#{unique_id}.mp3")
-    unless File.exist?(mp3_file_path)
-      files = Dir.glob(temp_dir.join("video_#{unique_id}.*")).select { |f| f.end_with?(".mp3") }
-      if files.any?
-        mp3_file_path = files.first
-      else
-        raise "MP3 file was not created."
-      end
+  
+    mp3_file_path = Dir.glob("#{temp_dir}/video_#{unique_id}.*").find { |f| f.end_with?(".mp3") }
+  
+    unless mp3_file_path
+      raise "MP3 file was not created. Available files: #{Dir.glob("#{temp_dir}/video_#{unique_id}.*")}"
     end
+  
+    Rails.logger.info "MP3 file created: #{mp3_file_path}"
     mp3_file_path
   end
+  
 
   def create_zip(file_paths)
     temp_dir = Rails.root.join("tmp", "downloads")
