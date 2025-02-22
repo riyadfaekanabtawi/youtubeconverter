@@ -5,7 +5,7 @@ class HomeController < ApplicationController
   require 'zip'  # Ensure the rubyzip gem is installed
 
   def index
-    # Renders index.html.erb
+    logger.info("aaaaaa")
   end
 
   def convert
